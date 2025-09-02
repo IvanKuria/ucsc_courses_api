@@ -34,7 +34,7 @@ def courses():
         "binds[:term]:": CourseParser.get_term_info()[0].get('term_id'),
         "binds[:subject]": request.args.get('subject', '').upper(),
         "binds[:reg_status]": request.args.get('reg_status', 'all'),
-        "rec_dur": request.args.get('count', 25),
+        "rec_dur": request.args.get('count', 1000),
         'type': request.args.get('type', 'all')
     }
     courses_payload = {**default_payload, **custom_payload}
@@ -55,7 +55,7 @@ def get_subject(subject):
         "binds[:term]:": CourseParser.get_term_info()[0].get('term_id'),
         "binds[:subject]": subject.upper(),
         "binds[:reg_status]": request.args.get('reg_status', 'all'),
-        "rec_dur": request.args.get('count', 25),
+        "rec_dur": request.args.get('count', 1000),
         'type': request.args.get('type', 'all')
     }
     courses_payload = {**default_payload, **custom_payload}

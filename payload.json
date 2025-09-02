@@ -13,7 +13,7 @@
       "binds[:instructor]":"",
       "binds[:reg_status]":"O",
       "binds[:subject]":"",
-      "binds[:term]":2210,
+      "binds[:term]":2258,
       "binds[:times]":"",
       "binds[:title]":""
 }

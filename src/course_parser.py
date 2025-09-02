@@ -83,7 +83,7 @@ class CourseParser():
             "binds[:term]": term,
             "binds[:times]": times,
             "binds[:title]": title,
-            "rec_dur":int(request.args.get('count', 100))
+            "rec_dur":int(request.args.get('count', 1000))
         }
 
     @staticmethod
@@ -120,26 +120,69 @@ class CourseParser():
 
         return_data = []
         for entries in parsed_results:
-
+            if not entries.strip():
+                continue
+                
             # Grab relevant data, heavily relying on html elements ( this may change a lot as the HTML page changes )
-            filtered_entry = Helpers.find_between(Helpers,entries,'<div class="panel-heading panel-heading-custom"><H2 style="margin:0px;">', 'Materials</a></div>')
+            # Updated for 2025 HTML structure
+            filtered_entry = Helpers.find_between(Helpers,entries,'<div class="panel-heading panel-heading-custom"><H2 style="margin:0px;">', '</H2></div>')
+            if not filtered_entry:
+                continue
+                
             filtered_json = {}
             print(f'filtered html entry: {filtered_entry}')
+            
+            # Extract course information from the new HTML structure
             descriptive_link = Helpers.find_between(Helpers, filtered_entry, 'href = "index.php?', '"')
             class_name = Helpers.find_between(Helpers, filtered_entry, '{}">'.format(descriptive_link), '</a>')
             title = Helpers.find_between(Helpers, filtered_entry, 'title="', '"')
             link_sources = Helpers.find_between(Helpers,filtered_entry,'<img src="','"')
             class_id = Helpers.find_between(Helpers,filtered_entry,'<a id="','"').replace('class_id_','')
-            instructor = Helpers.find_between(Helpers, filtered_entry, 'Instructor:</i>', '</div>')
-            location = Helpers.find_between(Helpers, filtered_entry, 'Location:</i>', '</div>')
-            date_time = Helpers.find_between(Helpers, filtered_entry, 'Day and Time:</i> ', '  </div>')
-            enrolled = Helpers.find_between(Helpers, filtered_entry, f'{date_time}  </div>  </div>  <div class="col-xs-6 col-sm-3"> ', 'Enrolled</div')
+            
+            # Look for the panel-body section for additional course details
+            panel_body_start = entries.find('<div class="panel-body"')
+            if panel_body_start != -1:
+                panel_body = entries[panel_body_start:panel_body_start + 2000]  # Get enough content
+                
+                # Extract instructor (look for fa-user icon)
+                instructor_match = Helpers.find_between(Helpers, panel_body, '<i class="fa fa-user"', '</div>')
+                if instructor_match:
+                    instructor = instructor_match.split('>')[-1].strip()
+                else:
+                    instructor = "Staff"
+                
+                # Extract location (look for fa-location-arrow icon)
+                location_match = Helpers.find_between(Helpers, panel_body, '<i class="fa fa-location-arrow"', '</div>')
+                if location_match:
+                    location = location_match.split('>')[-1].strip()
+                else:
+                    location = "TBA"
+                
+                # Extract date/time (look for fa-clock-o icon)
+                datetime_match = Helpers.find_between(Helpers, panel_body, '<i class="fa fa-clock-o"', '</div>')
+                if datetime_match:
+                    date_time = datetime_match.split('>')[-1].strip()
+                else:
+                    date_time = "TBA"
+                
+                # Extract enrollment info
+                enrolled_match = Helpers.find_between(Helpers, panel_body, 'Enrolled</div>', '</div>')
+                if enrolled_match:
+                    enrolled = enrolled_match.strip()
+                else:
+                    enrolled = "0 of 0"
+            else:
+                instructor = "Staff"
+                location = "TBA"
+                date_time = "TBA"
+                enrolled = "0 of 0"
+            
             # Parse into JSON document
-            filtered_json['status'] = title
+            filtered_json['status'] = title if title else "Open"
             filtered_json['link_sources'] = link_sources
             filtered_json['class_id'] = class_id
             filtered_json['descriptive_link'] = descriptive_link
-            filtered_json['class_name'] = class_name.replace('&nbsp;',' ')
+            filtered_json['class_name'] = class_name.replace('&nbsp;',' ') if class_name else "Unknown Course"
             filtered_json['instructor'] = instructor
             filtered_json['location'] = location
             filtered_json['date_time'] = date_time
